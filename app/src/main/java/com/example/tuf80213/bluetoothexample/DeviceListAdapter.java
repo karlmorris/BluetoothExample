@@ -37,8 +37,9 @@ public class DeviceListAdapter extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         TextView deviceName = new TextView(context);
-        deviceName.setPadding(5,5,5,5);
-        deviceName.setText(devices.get(position).getName());
+        deviceName.setPadding(0,16,0,16);
+        deviceName.setText(devices.get(position).getName() + " - "
+        + devices.get(position).getAddress());
         return deviceName;
     }
 }

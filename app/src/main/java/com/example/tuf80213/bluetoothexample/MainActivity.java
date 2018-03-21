@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.Set;
@@ -17,8 +18,7 @@ public class MainActivity extends Activity {
     ListView deviceListView;
     BluetoothAdapter bta;
 
-    private final int REQUEST_BLUETOOTH = 111;
-
+    private final int REQUEST_BLUETOOTH = 111, REQUEST_DISCOVER = 112;
 
     // Enable bluetooth functionality in app when Bluetooth enabled on device
     BroadcastReceiver bluetoothEnabledReceiver = new BroadcastReceiver() {
@@ -30,17 +30,32 @@ public class MainActivity extends Activity {
         }
     };
 
+    BroadcastReceiver bondStateChangedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(intent.getAction())) {
+                int state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_BONDED);
+                if (state == BluetoothDevice.BOND_BONDED)
+                    setupBluetoothDeviceList();
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (getActionBar() != null)
+            getActionBar().setTitle("Paired Bluetooth Devices");
+
         registerReceiver(bluetoothEnabledReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
+        registerReceiver(bondStateChangedReceiver, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED));
 
         // Get device's bluetooth adapter (might be null if none present)
         bta = BluetoothAdapter.getDefaultAdapter();
         deviceListView = (ListView) findViewById(R.id.deviceListView);
-        
+
         if (bta != null) {
             if (bta.isEnabled()) {
                 setupBluetoothDeviceList();
@@ -49,6 +64,10 @@ public class MainActivity extends Activity {
                 startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), REQUEST_BLUETOOTH);
             }
         }
+
+        findViewById(R.id.pairButton).setOnClickListener(
+                v -> startActivityForResult(new Intent(this, DiscoverActivity.class), REQUEST_DISCOVER)
+        );
 
     }
 
@@ -68,14 +87,14 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         // If Bluetooth Enable request accepted
-        if (requestCode == REQUEST_BLUETOOTH && resultCode == RESULT_OK) {
-            setupBluetoothDeviceList();
-        }
+        if (requestCode == REQUEST_BLUETOOTH && resultCode == RESULT_OK)
+           setupBluetoothDeviceList();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(bluetoothEnabledReceiver);
+        unregisterReceiver(bondStateChangedReceiver);
     }
 }
